@@ -57,7 +57,6 @@ def estimacion_periodo_muestreo(imagen, sondeos=5):
     nfila, ncol = imagen.shape
     lineas = np.floor(np.random.rand(sondeos)*nfila/2).astype(int)
     periodo = []
-    # lineas = np.array([244, 271, 38, 274, 189],dtype=np.int)
     for cont_periodo in np.arange(sondeos):
         linea = imagen[lineas[cont_periodo], :]
         locs, _ = signal.find_peaks(linea, prominence=[0.1])
@@ -84,7 +83,7 @@ def imagen2vector(imagen):
     # amplitud (posicion media de pixeles activos)
     nfila, ncol = imagen.shape
     ecg = np.zeros(ncol)
-    ecg[0] = 0 # eliminar, caso primer pixel.
+    ecg[0] = 0  # eliminar, caso primer pixel.
     for cont in np.arange(1, ncol):
         vector = imagen[:, cont]
         inds = indices(vector, lambda x: x == 255)
@@ -123,12 +122,22 @@ def elimina_region(imagen, min_area=30):
 
 def ECG_image_values(file, draw=False):
     img = cv2.bitwise_not(cv2.imread(file, cv2.IMREAD_GRAYSCALE))
+    # plt.plot(np.mean(img[:100, :], axis=0))
 
     # CALCULO DE PERIODO DE MUESTREO.DISTANCIA CUADRICULAS
-    kernel = np.ones((30, 1), np.uint8)  # note this is a horizontal kernel
-    d_im = cv2.dilate(img, kernel, iterations=1)
+    kernel = np.ones((100, 1), np.uint8)  # note this is a horizontal kernel
+    d_im = cv2.dilate(img[:100, :], kernel, iterations=1)
     e_im = cv2.erode(d_im, kernel, iterations=1)
-    Ts = estimacion_periodo_muestreo(e_im/255., sondeos=5)
+    # --- Metodo Raul ---
+    # Ts = estimacion_periodo_muestreo(e_im/255., sondeos=5)
+    # --- Metodo Mediana ---
+    # e_im = img[:100,:]
+    locs, _ = signal.find_peaks(np.median(e_im/255., axis=0), prominence=[0.05])
+    # plt.plot(np.median(e_im / 255., axis=0))
+    # plt.stem(locs, np.median(e_im / 255., axis=0)[locs], markerfmt='rx')
+    dif_locs = np.diff(locs)
+    periodo = np.median(dif_locs)
+    Ts = 0.04 / periodo
 
     # AJUSTE NO LINEAL DE CONTRASTE
     im_gray_ad = imadjust(img, gamma=2)
@@ -151,11 +160,12 @@ def ECG_image_values(file, draw=False):
     # CONVERSION IMAGEN A VECTOR
     ecg = imagen2vector(clean_img)
     if draw:
-        t = np.arange(0, len(ecg) * Ts, Ts)
+        t = np.arange(0, len(ecg) * Ts, Ts)[:len(ecg)]
         fig, axs = plt.subplots(4)
-        fig.suptitle('Procesado de ECG para image: ' + os.path.basename(file))
+        fig.suptitle('Ts ' + '{0:.4f}'.format(Ts) + ' - Procesado de ECG para image: ' + os.path.basename(file))
         axs[0].imshow(img, cmap='Greys')
         axs[1].imshow(e_im, cmap='Greys')
+        axs[1].stem(locs, 50*np.ones(len(locs)), markerfmt='rx')
         axs[2].imshow(clean_img, cmap='Greys')
         axs[3].plot(t, ecg)
         axs[3].set_xlim([0, np.max(t)])
@@ -167,14 +177,12 @@ def ECG_image_values(file, draw=False):
 # MAIN FUNCTION
 if __name__ == "__main__":
     txtfiles = []
-    for file in glob.glob("/Users/carabias/Desktop/COVID19_project/ecg/database/ecgc-set1/*.jpg"):
-        # file = "/Users/carabias/Desktop/COVID19_project/ecg/database/ecgc-set1/IMG_0916C.jpg"
-
+    for file in glob.glob("/Users/carabias/Desktop/ecg/database/ecgc-set1/*.jpg"):
+        # file = "/Users/carabias/Desktop/ecg/database/ecgc-set1/IMG_0904C.jpg"
         ecg, Ts = ECG_image_values(file, draw=False)
-
         adict = {}
-        adict['ecg2'] = ecg
-        adict['Ts2'] = Ts
+        adict['ecg'] = ecg
+        adict['Ts'] = Ts
         filename, file_extension = os.path.splitext(file)
         sio.savemat(filename + '_python_ecg.mat', adict)
 
