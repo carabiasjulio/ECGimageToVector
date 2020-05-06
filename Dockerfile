@@ -51,3 +51,10 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
 RUN ln -s \
   /usr/local/python/cv2/python-3.7/cv2.cpython-37m-x86_64-linux-gnu.so \
   /usr/local/lib/python3.7/site-packages/cv2.so
+
+#copying helloworld.py from local directory to container's helloworld folder
+COPY ecg.py /home/ecgtovector/ecg.py
+# COPY ecgc-set1 /home/ecgtovector/ecgc-set1
+
+#running helloworld.py in container
+CMD python /home/ecgtovector/ecg.py
