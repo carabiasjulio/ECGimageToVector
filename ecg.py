@@ -177,7 +177,7 @@ def ECG_image_values(file, draw=False):
 # MAIN FUNCTION
 if __name__ == "__main__":
     print('Processing ecgtovector')
-    for file in glob.glob("/home/ecgtovector/output/*.jpg"):
+    for file in glob.glob("/home/ecgtovector/input/*.jpg"):
         print('Procesing File: ' + file)
         # file = "/Users/carabias/Desktop/ecg/database/ecgc-set1/IMG_0904C.jpg"
         ecg, Ts = ECG_image_values(file, draw=False)
