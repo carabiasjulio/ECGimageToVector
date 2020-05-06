@@ -1,66 +1,53 @@
-FROM python:3-alpine3.7
+FROM python:3.7
+MAINTAINER Josip Janzic <josip@jjanzic.com>
 
-ENV CC=/usr/bin/clang \
-    CXX=/usr/bin/clang++ \
-    OPENCV_VERSION=3.4.1
-
-RUN echo -e '@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing\n\
-http://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories
-
-RUN  apk add -U \
-      --virtual .build-dependencies \
-        build-base \
-        openblas-dev \
-        unzip \
-        wget \
+RUN apt-get update \
+    && apt-get install -y \
+        build-essential \
         cmake \
-        # accelerated baseline JPEG compression and decompression library
-        libjpeg-turbo-dev \
-        # Portable Network Graphics library
+        git \
+        wget \
+        unzip \
+        yasm \
+        pkg-config \
+        libswscale-dev \
+        libtbb2 \
+        libtbb-dev \
+        libjpeg-dev \
         libpng-dev \
-        # A software-based implementation of the codec specified in the emerging JPEG-2000 Part-1 standard (development files)
-        jasper-dev \
-        # Provides support for the Tag Image File Format or TIFF (development files)
-        tiff-dev \
-        # Libraries for working with WebP images (development files)
-        libwebp-dev \
-        # A C language family front-end for LLVM (development files)
-        clang-dev \
-        linux-headers \
-    && pip install numpy \
-    && pip install scipy \
-    && pip install matplotlib \
-    && pip install glob \
-    && mkdir /opt \
-    && cd /opt \
-    && wget --quiet https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
-    && unzip ${OPENCV_VERSION}.zip \
-    && rm -rf ${OPENCV_VERSION}.zip \
-    && mkdir -p /opt/opencv-${OPENCV_VERSION}/build \
-    && cd /opt/opencv-${OPENCV_VERSION}/build \
-    && cmake \
-      -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=/usr/local \
-      -D WITH_FFMPEG=NO \
-      -D WITH_IPP=NO \
-      -D WITH_OPENEXR=NO \
-      -D WITH_TBB=YES \
-      -D BUILD_EXAMPLES=NO \
-      -D BUILD_ANDROID_EXAMPLES=NO \
-      -D INSTALL_PYTHON_EXAMPLES=NO \
-      -D BUILD_DOCS=NO \
-      -D BUILD_opencv_python2=NO \
-      -D BUILD_opencv_python3=ON \
-      -D PYTHON3_EXECUTABLE=/usr/local/bin/python \
-      -D PYTHON3_INCLUDE_DIR=/usr/local/include/python3.6m/ \
-      -D PYTHON3_LIBRARY=/usr/local/lib/libpython3.so \
-      -D PYTHON_LIBRARY=/usr/local/lib/libpython3.so \
-      -D PYTHON3_PACKAGES_PATH=/usr/local/lib/python3.6/site-packages/ \
-      -D PYTHON3_NUMPY_INCLUDE_DIRS=/usr/local/lib/python3.6/site-packages/numpy/core/include/ \
-      .. \
-    && make VERBOSE=1 \
-    && make \
-    && make install \
-    && rm -rf /opt/opencv-${OPENCV_VERSION} \
-    && apk del .build-dependencies \
-    && rm -rf /var/cache/apk/*
+        libtiff-dev \
+        libavformat-dev \
+        libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install numpy scipy matplotlib
+
+WORKDIR /
+ENV OPENCV_VERSION="4.1.1"
+RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
+&& unzip ${OPENCV_VERSION}.zip \
+&& mkdir /opencv-${OPENCV_VERSION}/cmake_binary \
+&& cd /opencv-${OPENCV_VERSION}/cmake_binary \
+&& cmake -DBUILD_TIFF=ON \
+  -DBUILD_opencv_java=OFF \
+  -DWITH_CUDA=OFF \
+  -DWITH_OPENGL=ON \
+  -DWITH_OPENCL=ON \
+  -DWITH_IPP=ON \
+  -DWITH_TBB=ON \
+  -DWITH_EIGEN=ON \
+  -DWITH_V4L=ON \
+  -DBUILD_TESTS=OFF \
+  -DBUILD_PERF_TESTS=OFF \
+  -DCMAKE_BUILD_TYPE=RELEASE \
+  -DCMAKE_INSTALL_PREFIX=$(python3.7 -c "import sys; print(sys.prefix)") \
+  -DPYTHON_EXECUTABLE=$(which python3.7) \
+  -DPYTHON_INCLUDE_DIR=$(python3.7 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON_PACKAGES_PATH=$(python3.7 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
+  .. \
+&& make install \
+&& rm /${OPENCV_VERSION}.zip \
+&& rm -r /opencv-${OPENCV_VERSION}
+RUN ln -s \
+  /usr/local/python/cv2/python-3.7/cv2.cpython-37m-x86_64-linux-gnu.so \
+  /usr/local/lib/python3.7/site-packages/cv2.so
