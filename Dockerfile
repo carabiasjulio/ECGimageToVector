@@ -1,65 +1,66 @@
+FROM python:3-alpine3.7
 
-# pull base image
-FROM patavee/scipy-matplotlib-py3
-MAINTAINER Patavee Charnvivit <patavee@gmail.com>
+ENV CC=/usr/bin/clang \
+    CXX=/usr/bin/clang++ \
+    OPENCV_VERSION=3.4.1
 
-# install dependencies
-RUN apt-get update && apt-get install -y \
-    wget \
-    unzip \
-    cmake \
-    pkg-config \
-    clang \
-    zlib1g-dev \
-    libjpeg-dev \
-    libwebp-dev \
-    libpng-dev \
-    libtiff5-dev \
-    libjasper-dev \
-    libopenexr-dev \
-    libgdal-dev \
-    libdc1394-22-dev \
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libtheora-dev \
-    libvorbis-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    yasm \
-    libopencore-amrnb-dev \
-    libopencore-amrwb-dev \
-    libunicap2-dev \
-    libv4l-0 \
-    libv4l-dev \
-    libxine2-dev \
-    v4l-utils \
-    libeigen3-dev \
-    libtbb-dev \
-    && \
-    rm -rf /var/lib/apt/lists/*
+RUN echo -e '@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing\n\
+http://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories
 
-# define compilers
-ENV CC /usr/bin/clang
-ENV CXX /usr/bin/clang++
-
-# compile
-RUN cd /tmp && \
-    wget -q -O opencv.zip https://github.com/Itseez/opencv/archive/3.2.0.zip && \
-    unzip -q opencv.zip && \
-    wget -q -O opencv_contrib.zip https://github.com/Itseez/opencv_contrib/archive/3.2.0.zip && \
-    unzip -q opencv_contrib.zip && \
-    mkdir opencv-3.2.0/build && \
-    cd opencv-3.2.0/build && \
-    cmake \
-    -D CMAKE_BUILD_TYPE=RELEASE \
-    -D BUILD_opencv_python2=NO \
-    -D BUILD_JPEG=YES \
-    -D WITH_WEBP=YES \
-    -D WITH_OPENEXR=YES \
-    -D BUILD_TESTS=NO \
-    -D BUILD_PERF_TESTS=NO \
-    .. && \
-    make -j 4 VERBOSE=1 && \
-    make && \
-    make install
+RUN  apk add -U \
+      --virtual .build-dependencies \
+        build-base \
+        openblas-dev \
+        unzip \
+        wget \
+        cmake \
+        # accelerated baseline JPEG compression and decompression library
+        libjpeg-turbo-dev \
+        # Portable Network Graphics library
+        libpng-dev \
+        # A software-based implementation of the codec specified in the emerging JPEG-2000 Part-1 standard (development files)
+        jasper-dev \
+        # Provides support for the Tag Image File Format or TIFF (development files)
+        tiff-dev \
+        # Libraries for working with WebP images (development files)
+        libwebp-dev \
+        # A C language family front-end for LLVM (development files)
+        clang-dev \
+        linux-headers \
+    && pip install numpy \
+    && pip install scipy \
+    && pip install matplotlib \
+    && pip install glob \
+    && mkdir /opt \
+    && cd /opt \
+    && wget --quiet https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
+    && unzip ${OPENCV_VERSION}.zip \
+    && rm -rf ${OPENCV_VERSION}.zip \
+    && mkdir -p /opt/opencv-${OPENCV_VERSION}/build \
+    && cd /opt/opencv-${OPENCV_VERSION}/build \
+    && cmake \
+      -D CMAKE_BUILD_TYPE=RELEASE \
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      -D WITH_FFMPEG=NO \
+      -D WITH_IPP=NO \
+      -D WITH_OPENEXR=NO \
+      -D WITH_TBB=YES \
+      -D BUILD_EXAMPLES=NO \
+      -D BUILD_ANDROID_EXAMPLES=NO \
+      -D INSTALL_PYTHON_EXAMPLES=NO \
+      -D BUILD_DOCS=NO \
+      -D BUILD_opencv_python2=NO \
+      -D BUILD_opencv_python3=ON \
+      -D PYTHON3_EXECUTABLE=/usr/local/bin/python \
+      -D PYTHON3_INCLUDE_DIR=/usr/local/include/python3.6m/ \
+      -D PYTHON3_LIBRARY=/usr/local/lib/libpython3.so \
+      -D PYTHON_LIBRARY=/usr/local/lib/libpython3.so \
+      -D PYTHON3_PACKAGES_PATH=/usr/local/lib/python3.6/site-packages/ \
+      -D PYTHON3_NUMPY_INCLUDE_DIRS=/usr/local/lib/python3.6/site-packages/numpy/core/include/ \
+      .. \
+    && make VERBOSE=1 \
+    && make \
+    && make install \
+    && rm -rf /opt/opencv-${OPENCV_VERSION} \
+    && apk del .build-dependencies \
+    && rm -rf /var/cache/apk/*
