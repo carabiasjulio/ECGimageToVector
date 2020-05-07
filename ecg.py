@@ -4,8 +4,9 @@ import cv2
 import numpy as np
 import scipy.signal as signal
 import scipy.io as sio
+from pdf2image import convert_from_path
 from matplotlib import pyplot as plt
-# plt.switch_backend('MacOSX')
+plt.switch_backend('MacOSX')
 
 
 # ---------------------------------------------------------------------------------------
@@ -121,7 +122,15 @@ def elimina_region(imagen, min_area=30):
 
 
 def ECG_image_values(file, draw=False):
-    img = cv2.bitwise_not(cv2.imread(file, cv2.IMREAD_GRAYSCALE))
+    _, extension = os.path.splitext(file)
+    if extension == '.pdf':
+        img = np.asarray(convert_from_path(file)[1])
+        img = cv2.bitwise_not(cv2.cvtColor(np.array(img), cv2.COLOR_BGR2GRAY))
+        img[1304:1321, 196:212] = 0  # Borro II
+        img = ResizeWithAspectRatio(img[1235:1480, 157:2123], height=800)
+    else:
+        img = cv2.bitwise_not(cv2.imread(file, cv2.IMREAD_GRAYSCALE))
+        img = ResizeWithAspectRatio(img, height=600)
     # plt.plot(np.mean(img[:100, :], axis=0))
 
     # CALCULO DE PERIODO DE MUESTREO.DISTANCIA CUADRICULAS
@@ -176,11 +185,19 @@ def ECG_image_values(file, draw=False):
 
 # MAIN FUNCTION
 if __name__ == "__main__":
+    in_path ='/home/ecgtovector/input/'
+    in_path = './ECG-Elda/'
+
     print('Processing ecgtovector')
-    for file in glob.glob("/home/ecgtovector/input/*.jpg"):
+    types = (in_path + '*.jpg', in_path + '*.pdf')  # the tuple of file types
+    files_grabbed = []
+    for files in types:
+        files_grabbed.extend(glob.glob(files))
+
+    for file in files_grabbed:
         print('Procesing File: ' + file)
-        # file = "/Users/carabias/Desktop/ecg/database/ecgc-set1/IMG_0904C.jpg"
-        ecg, Ts = ECG_image_values(file, draw=False)
+
+        ecg, Ts = ECG_image_values(file, draw=True)
         adict = {}
         adict['ecg'] = ecg
         adict['Ts'] = Ts

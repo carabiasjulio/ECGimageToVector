@@ -18,9 +18,10 @@ RUN apt-get update \
         libtiff-dev \
         libavformat-dev \
         libpq-dev \
+        poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install numpy scipy matplotlib
+RUN pip install numpy scipy matplotlib pdf2image
 
 WORKDIR /
 ENV OPENCV_VERSION="4.1.1"
