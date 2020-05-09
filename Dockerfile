@@ -19,12 +19,27 @@ RUN apt-get update \
         libavformat-dev \
         libpq-dev \
         poppler-utils \
+        libcurl4-openssl-dev \
+        libexpat1-dev \
+        gfortran \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install numpy scipy matplotlib pdf2image
+RUN pip install numpy scipy matplotlib pdf2image wfdb
 
 WORKDIR /
 ENV OPENCV_VERSION="4.1.1"
+RUN wget https://archive.physionet.org/physiotools/wfdb.tar.gz \
+&& tar xfvz wfdb.tar.gz \
+&& cd wfdb-10.6.2 \
+&& ./configure \
+&& make install \
+&& make check
+
+RUN wget -r -N -c -np https://physionet.org/files/ecgpuwave/1.3.4/ \
+&& cd physionet.org/files/ecgpuwave/1.3.4/src/ecgpuwave/ \
+&& make install \
+&& make check
+
 RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
 && unzip ${OPENCV_VERSION}.zip \
 && mkdir /opencv-${OPENCV_VERSION}/cmake_binary \
@@ -54,8 +69,10 @@ RUN ln -s \
   /usr/local/lib/python3.7/site-packages/cv2.so
 
 #copying helloworld.py from local directory to container's helloworld folder
-COPY ecg.py /home/ecgtovector/ecg.py
+COPY ecgImage.py /home/ecgProject/ecgImage.py
+COPY ecgSignal.py /home/ecgProject/ecgSignal.py
+COPY demo.py /home/ecgProject/demo.py
 # COPY ecgc-set1 /home/ecgtovector/ecgc-set1
 
 #running helloworld.py in container
-CMD python /home/ecgtovector/ecg.py
+CMD python /home/ecgProject/demo.py

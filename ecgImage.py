@@ -6,7 +6,7 @@ import scipy.signal as signal
 import scipy.io as sio
 from pdf2image import convert_from_path
 from matplotlib import pyplot as plt
-plt.switch_backend('MacOSX')
+# plt.switch_backend('MacOSX')
 
 
 # ---------------------------------------------------------------------------------------
@@ -100,7 +100,9 @@ def imagen2vector(imagen):
     # MEJORAS: CONSIDERAR TROZOS EN VEZ DE COLUMNAS AISLADAS
     # POST-PROCESAR Y ELIMINAR POCA CONTINUIDAD.
     # PICOS DERIVADA
-    return ecg
+    out = np.zeros((len(ecg), 1))
+    out[:,0] = ecg
+    return out
 
 
 def elimina_region(imagen, min_area=30):
@@ -185,8 +187,9 @@ def ECG_image_values(file, draw=False):
 
 # MAIN FUNCTION
 if __name__ == "__main__":
-    in_path ='/home/ecgtovector/input/'
-    in_path = './ECG-Elda/'
+    # in_path ='/home/ecgtovector/input/'
+    in_path = 'ecgFolder/'
+    #in_path = './ECG-Elda/'
 
     print('Processing ecgtovector')
     types = (in_path + '*.jpg', in_path + '*.pdf')  # the tuple of file types
@@ -197,7 +200,7 @@ if __name__ == "__main__":
     for file in files_grabbed:
         print('Procesing File: ' + file)
 
-        ecg, Ts = ECG_image_values(file, draw=True)
+        ecg, Ts = ECG_image_values(file, draw=False)
         adict = {}
         adict['ecg'] = ecg
         adict['Ts'] = Ts
